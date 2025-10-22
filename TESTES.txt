@@ -1,0 +1,41 @@
+5 CLUSTERS
+
+OpenMP:
+1 thread:  19.803 s
+2 threads: 10.4153 s
+4 threads: 6.60771 s
+8 threads: 6.19227 s
+           
+
+Híbrido MPI + OpenMP:
+1 proc 4 thr: 18.5252 s
+2 proc 2 thr: 10.278 0 s
+4 proc 1 thr: 11.2555 s
+
+10 CLUSTERS
+
+OpenMP:
+1 thread: 35.085 s
+2 threads: 17.6178 s
+4 threads: 10.3301 s
+8 threads: 6.66162 s
+           
+
+Híbrido MPI + OpenMP:
+1 proc 4 thr: 39.5158 s
+2 proc 2 thr: 19.7932 s
+4 proc 1 thr: 19.367  s
+
+15 CLUSTERS
+
+OpenMP:
+1 thread: 51.4609 s
+2 threads: 28.016 s
+4 threads: 17.3703 s
+8 threads: 12.275s
+           
+
+Híbrido MPI + OpenMP:
+1 proc 4 thr: 48.6451 s
+2 proc 2 thr: 28.0142 s
+4 proc 1 thr: 28.0967  s
