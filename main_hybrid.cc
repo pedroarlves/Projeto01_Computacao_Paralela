@@ -1,124 +1,55 @@
 /*
 ================================================================================
-main_hybrid.cc - Implementação Híbrida K-Means com MPI + OpenMP
+main_hybrid.cc - Implementação K-Means Híbrida (MPI + OpenMP)
 ================================================================================
 
-DESCRIÇÃO:
-  Implementação do algoritmo K-Means utilizando paralelização híbrida MPI+OpenMP.
-  Combina paralelismo de memória distribuída (MPI) com paralelismo de memória
-  compartilhada (OpenMP) para máxima escalabilidade.
+TEMPOS DE EXECUÇÃO (servidor parcode)
+Dataset: MNIST train (60.000 amostras, 785 dimensões), K=15, max_iter=100
 
-USO:
-  mpirun -np <procs> ./main_hybrid <dataset.csv> <K> <max_iter> [seed]
-  
-  Parâmetros:
-    - procs: número de processos MPI
-    - dataset.csv: arquivo CSV onde cada linha é um ponto (valores separados por vírgula)
-    - K: número de clusters desejado
-    - max_iter: número máximo de iterações
-    - seed: semente aleatória (opcional)
+VERSÃO MPI+OpenMP (Híbrida):
+  1 processo × 4 threads: 48.6451 s
+  2 processos × 2 threads: 28.0142 s
+  4 processos × 1 thread:  28.0967 s
 
-EXEMPLOS:
-  # 1 processo com 4 threads OpenMP
-  OMP_NUM_THREADS=4 mpirun -np 1 ./main_hybrid dataset/mnist_train.csv 15 100
-
-  # 2 processos com 2 threads OpenMP cada (total: 4 cores)
-  OMP_NUM_THREADS=2 mpirun -np 2 ./main_hybrid dataset/mnist_train.csv 15 100
-
-  # 4 processos com 1 thread OpenMP cada (MPI puro)
-  OMP_NUM_THREADS=1 mpirun -np 4 ./main_hybrid dataset/mnist_train.csv 15 100
+VERSÃO OpenMP (para comparação):
+  1 thread:  51.4609 s
+  2 threads: 28.016 s
+  4 threads: 17.3703 s
+  8 threads: 12.275 s
 
 ================================================================================
-TEMPOS DE EXECUÇÃO (medidos no servidor parcode)
-================================================================================
-Dataset: MNIST train (60.000 amostras, 785 dimensões)
-Parâmetros: K=15 clusters, max_iter=100
-
-Versão OpenMP (usando main_hybrid com 1 processo):
-  1 thread:  51.4609 s  (baseline sequencial)
-  2 threads: 28.016 s   (speedup: 1.84x)
-  4 threads: 17.3703 s  (speedup: 2.96x)
-  8 threads: 12.275 s   (speedup: 4.19x)
-
-Versão Híbrida MPI+OpenMP (4 cores totais):
-  1 proc × 4 threads: 48.6451 s  (speedup: 1.06x)
-  2 proc × 2 threads: 28.0142 s  (speedup: 1.84x)
-  4 proc × 1 thread:  28.0967 s  (speedup: 1.83x)
-
-================================================================================
-MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO (conforme exigido pelo enunciado)
+MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO
 ================================================================================
 
-1. DISTRIBUIÇÃO DE DADOS COM MPI (Scatter):
-   - Apenas o processo rank 0 carrega o dataset completo do arquivo CSV
-   - Metadados (N_total e D) são broadcast para todos os processos via MPI_Bcast
-   - Dataset é dividido igualmente entre processos usando MPI_Scatterv
-   - Cada processo recebe um subconjunto das linhas (pontos) para processar
-   - Buffer de envio é linearizado (flattened) para comunicação eficiente
+1. DISTRIBUIÇÃO DE DADOS COM MPI:
+   - Rank 0 carrega dataset e faz broadcast de metadados (N, D)
+   - Dataset dividido entre processos usando MPI_Scatterv
+   - Cada processo recebe subconjunto de pontos para processar
 
-2. INICIALIZAÇÃO DOS CENTRÓIDES:
-   - Rank 0 seleciona K centróides iniciais aleatoriamente (sem repetição)
-   - Centróides são broadcast para todos os processos via MPI_Bcast
-   - Garante que todos os processos começam com os mesmos centróides
+2. INICIALIZAÇÃO E SINCRONIZAÇÃO DE CENTRÓIDES:
+   - Rank 0 seleciona K centróides iniciais aleatoriamente
+   - Centróides enviados para todos os processos via MPI_Bcast
 
-3. PARALELIZAÇÃO HÍBRIDA (Assignment Step):
-   - Nível MPI: cada processo trabalha em seu subconjunto local de pontos
-   - Nível OpenMP: dentro de cada processo, threads paralelizam o loop
+3. PARALELIZAÇÃO HÍBRIDA NO LOOP DE ATRIBUIÇÃO:
+   - Nível MPI: cada processo trabalha em seu subconjunto local
+   - Nível OpenMP: threads paralelizam cálculo de distâncias no processo
    - Cada thread mantém buffers privativos (thread_sum_flat, thread_count)
-   - Evita contenção e seções críticas durante o processamento paralelo
 
-4. REDUÇÃO MULTI-NÍVEL:
-   a) Redução local (OpenMP):
-      - Buffers de cada thread são somados aos buffers locais do processo
-      - Ocorre após a região paralela OpenMP
-   b) Redução global (MPI):
-      - Somas e contagens locais de cada processo são combinadas
-      - Usa MPI_Allreduce para somas (K×D doubles) e contagens (K ints)
-      - Todos os processos recebem os resultados globais
+4. REDUÇÃO EM DOIS NÍVEIS:
+   - Nível OpenMP: buffers de threads somados aos buffers do processo
+   - Nível MPI: MPI_Allreduce combina somas/contagens de todos processos
 
-5. ATUALIZAÇÃO DOS CENTRÓIDES:
-   - Cada processo calcula novos centróides: centroid[k] = global_sum[k] / global_count[k]
-   - Todos os processos têm os mesmos centróides atualizados (via Allreduce)
-   - Convergência é detectada quando centróides não mudam significativamente
+5. ATUALIZAÇÃO REPLICADA DE CENTRÓIDES:
+   - Cada processo calcula novos centróides usando resultados globais
+   - Centróides replicados e sincronizados em todos os processos
 
-6. COLETA DE RESULTADOS (Gather):
-   - Labels locais de cada processo são coletados no rank 0 via MPI_Gatherv
-   - Rank 0 reconstrói o vetor completo de labels na ordem original
+6. COLETA DE RESULTADOS:
+   - Labels locais coletados no rank 0 via MPI_Gatherv
+   - Rank 0 reconstrói vetor completo de labels
 
-7. SINCRONIZAÇÃO E MEDIÇÃO DE TEMPO:
-   - MPI_Barrier antes e depois da computação para medição precisa
+7. SINCRONIZAÇÃO E TIMING:
+   - MPI_Barrier para medição precisa de tempo
    - MPI_Wtime para timing consistente entre processos
-   - Apenas rank 0 reporta tempo final
-
-FUNÇÕES MPI UTILIZADAS:
-  - MPI_Init/MPI_Finalize: inicialização e finalização
-  - MPI_Comm_rank/MPI_Comm_size: identificação de processos
-  - MPI_Bcast: broadcast de metadados e centróides
-  - MPI_Scatterv: distribuição não-uniforme de dados
-  - MPI_Allreduce: redução global (soma) com resultado em todos os processos
-  - MPI_Gatherv: coleta não-uniforme de resultados
-  - MPI_Barrier: sincronização de processos
-  - MPI_Wtime: medição de tempo
-  - MPI_Abort: terminação em caso de erro
-
-DIRETIVAS OpenMP UTILIZADAS:
-  - #pragma omp parallel: região paralela
-  - #pragma omp for schedule(static): divisão estática de iterações
-  - omp_get_thread_num(): identificação de thread
-  - omp_get_max_threads(): número de threads disponíveis
-
-OTIMIZAÇÕES IMPLEMENTADAS:
-  - Buffers linearizados (flattened arrays) para comunicação MPI eficiente
-  - Buffers por thread para evitar contenção em OpenMP
-  - Uso de MPI_Allreduce em vez de Reduce+Bcast (1 operação vs 2)
-  - Tolerância de convergência ajustada (1e-6) para convergência mais rápida
-  - Seed diferente por rank (seed+rank) para variação aleatória
-
-OBSERVAÇÕES:
-  - Código base desenvolvido especificamente para este projeto
-  - Dataset MNIST disponível em: https://www.kaggle.com/datasets/oddrationale/mnist-in-csv
-  - Para compilar: cmake --build build
-  - Para executar: OMP_NUM_THREADS=<t> mpirun -np <p> ./build/main_hybrid <dataset> <K> <iter>
 
 ================================================================================
 */

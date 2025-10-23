@@ -1,75 +1,37 @@
 /*
 ================================================================================
-main.cc - Implementação Paralela K-Means com OpenMP
+main.cc - Implementação K-Means com OpenMP
 ================================================================================
 
-DESCRIÇÃO:
-  Implementação do algoritmo K-Means utilizando paralelização OpenMP.
-  O algoritmo agrupa dados em K clusters minimizando a distância euclidiana
-  entre os pontos e os centróides.
+TEMPOS DE EXECUÇÃO (servidor parcode)
+Dataset: MNIST train (60.000 amostras, 785 dimensões), K=15, max_iter=100
 
-USO:
-  ./main <dataset.csv> <K> <max_iter> [seed]
-  
-  Parâmetros:
-    - dataset.csv: arquivo CSV onde cada linha é um ponto (valores separados por vírgula)
-    - K: número de clusters desejado
-    - max_iter: número máximo de iterações
-    - seed: semente aleatória (opcional, para reprodutibilidade)
-
-EXEMPLO:
-  OMP_NUM_THREADS=4 ./main dataset/mnist_train.csv 15 100 42
-
-================================================================================
-TEMPOS DE EXECUÇÃO (medidos no servidor parcode)
-================================================================================
-Dataset: MNIST train (60.000 amostras, 785 dimensões)
-Parâmetros: K=15 clusters, max_iter=100
-
-Versão OpenMP:
-  1 thread:  51.4609 s  (baseline sequencial)
+Versão sequencial (1 thread):  51.4609 s
+Versão paralela:
   2 threads: 28.016 s   (speedup: 1.84x)
   4 threads: 17.3703 s  (speedup: 2.96x)
   8 threads: 12.275 s   (speedup: 4.19x)
 
 ================================================================================
-MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO (conforme exigido pelo enunciado)
+MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO
 ================================================================================
 
-1. PARALELIZAÇÃO DO LOOP PRINCIPAL (Assignment Step):
-   - Usado #pragma omp parallel para criar região paralela
-   - Cada thread processa um subconjunto dos pontos (scheduling estático)
-   - Cada thread calcula distâncias e atribui pontos aos clusters
-   - Cada thread mantém acumuladores locais (local_sum e local_count)
+1. PARALELIZAÇÃO DO LOOP DE ATRIBUIÇÃO:
+   - Adicionado #pragma omp parallel para criar região paralela
+   - Adicionado #pragma omp for schedule(static) para dividir pontos entre threads
+   - Cada thread processa subconjunto independente de pontos
 
-2. REDUÇÃO MANUAL DOS RESULTADOS:
-   - Cada thread acumula suas somas e contagens localmente
-   - Ao final do loop paralelo, usa #pragma omp critical para somar
-     os acumuladores locais aos acumuladores globais
-   - Evita race conditions sem usar redução automática
+2. ACUMULADORES LOCAIS POR THREAD:
+   - Cada thread mantém local_sum e local_count privativos
+   - Evita contenção e race conditions durante processamento paralelo
 
-3. ATUALIZAÇÃO DOS CENTRÓIDES:
-   - Feita sequencialmente após a região paralela
-   - Calcula novos centróides: centroid[k] = sum[k] / count[k]
-   - Verifica convergência comparando centróides antigos e novos
+3. REDUÇÃO MANUAL COM SEÇÃO CRÍTICA:
+   - Adicionado #pragma omp critical para somar acumuladores locais aos globais
+   - Redução ocorre apenas uma vez por thread, minimizando overhead
 
-4. ESTRUTURA DE DADOS:
-   - mat (matriz de doubles): representa o dataset e centróides
-   - vec (vetor de doubles): representa um ponto ou centróide
-   - Armazenamento contíguo facilita acesso paralelo
-
-DIRETIVAS OpenMP UTILIZADAS:
-  - #pragma omp parallel: cria região paralela
-  - #pragma omp for schedule(static): divide iterações entre threads
-  - #pragma omp critical: protege seção crítica (redução manual)
-  - omp_get_thread_num(): identifica cada thread
-  - omp_get_num_threads(): número total de threads
-
-OBSERVAÇÕES:
-  - Versão sequencial disponível em: implementação original (base deste código)
-  - Dataset MNIST disponível em: https://www.kaggle.com/datasets/oddrationale/mnist-in-csv
-  - Para compilar: cmake --build build
-  - Para executar: OMP_NUM_THREADS=<n> ./build/main <dataset> <K> <max_iter>
+4. ATUALIZAÇÃO SEQUENCIAL DOS CENTRÓIDES:
+   - Cálculo de novos centróides feito fora da região paralela
+   - Verificação de convergência permanece sequencial
 
 ================================================================================
 */
