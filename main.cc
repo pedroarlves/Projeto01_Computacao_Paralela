@@ -1,24 +1,78 @@
-//main.cc 
-// Implementação sequencial de K-Means (C++17)
-// Uso: ./kmeans data.csv K max_iter seed
-// - data.csv: CSV onde cada linha é um exemplo, colunas separadas por vírgula (float)
-// - K: número de clusters
-// - max_iter: número máximo de iterações
-// - seed: seed aleatória (opcional)
+/*
+================================================================================
+main.cc - Implementação Paralela K-Means com OpenMP
+================================================================================
 
-// ------------------------------
-// NOTAS SOBRE PARALLELIZAÇÃO (comentários exigidos pelo enunciado):
-// - Para OpenMP: paralelizar o loop que calcula a distância de cada ponto para cada centróide
-//   e a acumulação de somas para novos centróides. Usar #pragma omp parallel for
-//   com redução (ou arrays privativos + redução manual). Também paralelizar a etapa de
-//   atribuição de pontos se necessário.
-// - Para MPI: distribuir as linhas (pontos) entre os ranks (scatter or read-split).
-//   Cada rank calcula soma local e contagem por centróide; em seguida usar MPI_Allreduce
-//   para reduzir somas e contagens e atualizar centróides em todos os ranks. A etapa de
-//   inicialização dos centróides pode ser feita pelo rank 0 e depois broadcast com MPI_Bcast.
-// - No código abaixo eu marco explicitamente (COMENTADO) onde as diretivas OpenMP e chamadas
-//   MPI deveriam ser inseridas.
-// ------------------------------
+DESCRIÇÃO:
+  Implementação do algoritmo K-Means utilizando paralelização OpenMP.
+  O algoritmo agrupa dados em K clusters minimizando a distância euclidiana
+  entre os pontos e os centróides.
+
+USO:
+  ./main <dataset.csv> <K> <max_iter> [seed]
+  
+  Parâmetros:
+    - dataset.csv: arquivo CSV onde cada linha é um ponto (valores separados por vírgula)
+    - K: número de clusters desejado
+    - max_iter: número máximo de iterações
+    - seed: semente aleatória (opcional, para reprodutibilidade)
+
+EXEMPLO:
+  OMP_NUM_THREADS=4 ./main dataset/mnist_train.csv 15 100 42
+
+================================================================================
+TEMPOS DE EXECUÇÃO (medidos no servidor parcode)
+================================================================================
+Dataset: MNIST train (60.000 amostras, 785 dimensões)
+Parâmetros: K=15 clusters, max_iter=100
+
+Versão OpenMP:
+  1 thread:  51.4609 s  (baseline sequencial)
+  2 threads: 28.016 s   (speedup: 1.84x)
+  4 threads: 17.3703 s  (speedup: 2.96x)
+  8 threads: 12.275 s   (speedup: 4.19x)
+
+================================================================================
+MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO (conforme exigido pelo enunciado)
+================================================================================
+
+1. PARALELIZAÇÃO DO LOOP PRINCIPAL (Assignment Step):
+   - Usado #pragma omp parallel para criar região paralela
+   - Cada thread processa um subconjunto dos pontos (scheduling estático)
+   - Cada thread calcula distâncias e atribui pontos aos clusters
+   - Cada thread mantém acumuladores locais (local_sum e local_count)
+
+2. REDUÇÃO MANUAL DOS RESULTADOS:
+   - Cada thread acumula suas somas e contagens localmente
+   - Ao final do loop paralelo, usa #pragma omp critical para somar
+     os acumuladores locais aos acumuladores globais
+   - Evita race conditions sem usar redução automática
+
+3. ATUALIZAÇÃO DOS CENTRÓIDES:
+   - Feita sequencialmente após a região paralela
+   - Calcula novos centróides: centroid[k] = sum[k] / count[k]
+   - Verifica convergência comparando centróides antigos e novos
+
+4. ESTRUTURA DE DADOS:
+   - mat (matriz de doubles): representa o dataset e centróides
+   - vec (vetor de doubles): representa um ponto ou centróide
+   - Armazenamento contíguo facilita acesso paralelo
+
+DIRETIVAS OpenMP UTILIZADAS:
+  - #pragma omp parallel: cria região paralela
+  - #pragma omp for schedule(static): divide iterações entre threads
+  - #pragma omp critical: protege seção crítica (redução manual)
+  - omp_get_thread_num(): identifica cada thread
+  - omp_get_num_threads(): número total de threads
+
+OBSERVAÇÕES:
+  - Versão sequencial disponível em: implementação original (base deste código)
+  - Dataset MNIST disponível em: https://www.kaggle.com/datasets/oddrationale/mnist-in-csv
+  - Para compilar: cmake --build build
+  - Para executar: OMP_NUM_THREADS=<n> ./build/main <dataset> <K> <max_iter>
+
+================================================================================
+*/
 
 #include <bits/stdc++.h>
 #include <omp.h>

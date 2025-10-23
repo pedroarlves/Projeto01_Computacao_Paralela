@@ -14,7 +14,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Add common optimization flags
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O0 -march=native -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -DNDEBUG")
 
 # Find MPI
 find_package(MPI REQUIRED)
@@ -22,14 +22,19 @@ find_package(MPI REQUIRED)
 # Find OpenMP
 find_package(OpenMP REQUIRED)
 
-# Executable
+# Executable for OpenMP version
 add_executable(main main.cc)
 
-# Include MPI headers
-target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH})
+# Executable for Hybrid MPI+OpenMP version
+add_executable(main_hybrid main_hybrid.cc)
 
-# Link everything (MPI + OpenMP)
+# Include MPI headers for both
+target_include_directories(main PRIVATE ${MPI_CXX_INCLUDE_PATH})
+target_include_directories(main_hybrid PRIVATE ${MPI_CXX_INCLUDE_PATH})
+
+# Link everything (MPI + OpenMP) for both executables
 target_link_libraries(main PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX)
+target_link_libraries(main_hybrid PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX)
 
 # Optional: show compilation info
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")

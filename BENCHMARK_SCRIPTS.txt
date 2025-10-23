@@ -1,0 +1,182 @@
+================================================================================
+BENCHMARK SCRIPTS DOCUMENTATION
+================================================================================
+
+This folder contains two bash scripts for testing the K-Means implementations:
+
+1. run_benchmarks.sh     - Full automated benchmark suite
+2. run_quick_test.sh     - Quick single test for development
+
+
+================================================================================
+1. run_benchmarks.sh - FULL BENCHMARK SUITE
+================================================================================
+
+DESCRIPTION:
+  Compiles both OpenMP and MPI+OpenMP versions and runs all required test
+  configurations. Results are automatically saved to a structured CSV file.
+
+USAGE:
+  ./run_benchmarks.sh [OPTIONS]
+
+OPTIONS:
+  -d, --dataset PATH     Dataset path (default: dataset/mnist_train.csv)
+  -k, --clusters NUM     Number of clusters (default: 15)
+  -m, --max-iter NUM     Maximum iterations (default: 100)
+  -s, --seed NUM         Random seed (default: 42)
+  -o, --output FILE      Output CSV file (default: benchmark_results.csv)
+  -h, --help             Show help message
+
+EXAMPLES:
+
+  # Run with default settings (K=15, max_iter=100)
+  ./run_benchmarks.sh
+
+  # Run with 10 clusters and save to custom file
+  ./run_benchmarks.sh -k 10 -o results_k10.csv
+
+  # Run with 5 clusters, 50 iterations, custom seed
+  ./run_benchmarks.sh -k 5 -m 50 -s 123
+
+  # Use different dataset
+  ./run_benchmarks.sh -d dataset/mnist_test.csv -k 8
+
+WHAT IT DOES:
+  1. Cleans previous build
+  2. Configures with CMake
+  3. Builds both executables (main and main_hybrid)
+  4. Creates CSV file with headers
+  5. Runs OpenMP tests:
+     - 1 thread
+     - 2 threads
+     - 4 threads
+     - 8 threads
+  6. Runs MPI+OpenMP hybrid tests:
+     - 1 process × 4 threads
+     - 2 processes × 2 threads
+     - 4 processes × 1 thread
+  7. Saves all results to CSV
+  8. Displays summary with speedup analysis
+
+OUTPUT CSV FORMAT:
+  Columns:
+    - version: OpenMP or MPI+OpenMP
+    - configuration: e.g., "1_thread", "2proc_2threads"
+    - num_processes: Number of MPI processes
+    - num_threads: Number of OpenMP threads per process
+    - total_cores: Total cores used (processes × threads)
+    - k_clusters: Number of clusters
+    - max_iterations: Maximum iterations parameter
+    - execution_time_s: Measured execution time in seconds
+    - iterations_completed: Actual iterations until convergence
+    - dataset: Dataset file path
+
+EXAMPLE OUTPUT:
+  version      configuration    num_processes  num_threads  total_cores  k_clusters  max_iterations  execution_time_s  iterations_completed  dataset
+  OpenMP       1_thread         1              1            1            15          100             51.4609           23                    dataset/mnist_train.csv
+  OpenMP       2_threads        1              2            2            15          100             28.016            23                    dataset/mnist_train.csv
+  OpenMP       4_threads        1              4            4            15          100             17.3703           23                    dataset/mnist_train.csv
+  OpenMP       8_threads        1              8            8            15          100             12.275            23                    dataset/mnist_train.csv
+  MPI+OpenMP   1proc_4threads   1              4            4            15          100             48.6451           23                    dataset/mnist_train.csv
+  MPI+OpenMP   2proc_2threads   2              2            4            15          100             28.0142           23                    dataset/mnist_train.csv
+  MPI+OpenMP   4proc_1thread    4              1            4            15          100             28.0967           23                    dataset/mnist_train.csv
+
+
+================================================================================
+2. run_quick_test.sh - QUICK TEST
+================================================================================
+
+DESCRIPTION:
+  Simplified script for quick testing during development. Runs a single
+  OpenMP test with default parameters.
+
+USAGE:
+  ./run_quick_test.sh
+
+WHAT IT DOES:
+  1. Cleans and rebuilds the project
+  2. Runs OpenMP version with 4 threads, K=5, max_iter=50
+  3. Displays execution time
+
+MODIFYING DEFAULTS:
+  Edit the script to change defaults:
+    K=5           -> Number of clusters
+    MAX_ITER=50   -> Maximum iterations
+    THREADS=4     -> Number of OpenMP threads
+
+
+================================================================================
+REQUIREMENTS
+================================================================================
+
+Both scripts require:
+  - CMake 3.15+
+  - C++ compiler with C++17 support
+  - OpenMP
+  - MPI (OpenMPI or MPICH)
+  - Dataset files in dataset/ folder
+
+The scripts will fail gracefully if requirements are not met.
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+ERROR: "Dataset file not found"
+  - Ensure dataset/mnist_train.csv exists
+  - Or use -d flag to specify correct path
+
+ERROR: "Build failed"
+  - Check that CMake, MPI, and OpenMP are installed
+  - Verify CMakeLists.txt is present
+  - Check compiler errors in build output
+
+ERROR: "Permission denied"
+  - Make scripts executable: chmod +x run_benchmarks.sh
+
+SLOW EXECUTION:
+  - Reduce K clusters: use -k 5 instead of -k 15
+  - Reduce max iterations: use -m 50
+  - Use smaller dataset
+
+
+================================================================================
+ANALYZING RESULTS
+================================================================================
+
+The CSV file can be analyzed with:
+
+1. Spreadsheet software (Excel, LibreOffice Calc)
+   - Import the CSV file
+   - Create charts comparing execution times
+   - Calculate speedup ratios
+
+2. Command line tools:
+   
+   # View formatted results
+   column -t -s',' benchmark_results.csv | less
+
+   # Extract just execution times
+   awk -F',' 'NR>1 {print $2, $8}' benchmark_results.csv
+
+   # Calculate speedups
+   awk -F',' 'NR==2 {baseline=$8} NR>1 {print $2, baseline/$8}' benchmark_results.csv
+
+3. Python/R for advanced analysis and plotting
+
+
+================================================================================
+INTEGRATION WITH ASSIGNMENT
+================================================================================
+
+This script fulfills the assignment requirement for:
+  ✓ Running with 1, 2, 4, 8 threads (OpenMP)
+  ✓ Running 1proc×4thr, 2proc×2thr, 4proc×1thr (MPI)
+  ✓ Collecting timing data
+  ✓ Organized output format
+
+The CSV results can be directly used in your project report.
+
+
+================================================================================

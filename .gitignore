@@ -1,0 +1,228 @@
+# ============================================================================
+# .gitignore for Parallel K-Means Project (OpenMP + MPI)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Build artifacts
+# ----------------------------------------------------------------------------
+build/
+*.o
+*.obj
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Executables
+main
+main_hybrid
+kmeans
+kmeans_openmp
+kmeans_hybrid
+kmeans_mpi_omp
+
+# ----------------------------------------------------------------------------
+# CMake
+# ----------------------------------------------------------------------------
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+cmake-build-*/
+
+# ----------------------------------------------------------------------------
+# Benchmark and test results
+# ----------------------------------------------------------------------------
+# Keep example_output.csv as reference, but ignore actual benchmark results
+benchmark_results.csv
+*_results.csv
+test_results*.csv
+*.csv.bak
+
+# Uncomment if you don't want to track any CSV results:
+# *.csv
+
+# Keep the example file
+!example_output.csv
+
+# Keep small dataset files, but ignore the large training set
+!dataset/*.csv
+# mnist_train.csv is 105MB (exceeds GitHub 100MB limit)
+dataset/mnist_train.csv
+
+# ----------------------------------------------------------------------------
+# Logs and temporary files
+# ----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.*.swp
+.DS_Store
+
+# ----------------------------------------------------------------------------
+# IDE and Editor files
+# ----------------------------------------------------------------------------
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# CLion / IntelliJ
+.idea/
+*.iml
+cmake-build-debug/
+cmake-build-release/
+
+# Eclipse
+.cproject
+.project
+.settings/
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ----------------------------------------------------------------------------
+# OS specific
+# ----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ----------------------------------------------------------------------------
+# Core dumps and debugging
+# ----------------------------------------------------------------------------
+core
+core.*
+vgcore.*
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# ----------------------------------------------------------------------------
+# Profiling and performance analysis
+# ----------------------------------------------------------------------------
+*.prof
+*.gprof
+perf.data
+perf.data.old
+*.nvprof
+*.nsight-cuprof
+
+# ----------------------------------------------------------------------------
+# Backup files
+# ----------------------------------------------------------------------------
+*.bak
+*.backup
+*~
+.*.bak
+
+# ----------------------------------------------------------------------------
+# Compiled Python (if you add analysis scripts)
+# ----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# ----------------------------------------------------------------------------
+# Jupyter Notebooks (if you add analysis notebooks)
+# ----------------------------------------------------------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ----------------------------------------------------------------------------
+# Documentation build artifacts
+# ----------------------------------------------------------------------------
+*.pdf
+*.aux
+*.toc
+*.out
+*.synctex.gz
+
+# Keep the README and documentation files
+!README.pdf
+!RELATORIO.pdf
+
+# ----------------------------------------------------------------------------
+# MPI specific
+# ----------------------------------------------------------------------------
+# MPI hostfiles (may contain sensitive server info)
+hostfile
+hosts.txt
+nodefile
+
+# ----------------------------------------------------------------------------
+# Job scheduler outputs (for cluster environments)
+# ----------------------------------------------------------------------------
+*.o[0-9]*
+*.e[0-9]*
+slurm-*.out
+*.pbs.o*
+*.pbs.e*
+
+# ----------------------------------------------------------------------------
+# Large datasets (optional - uncomment if datasets are too large)
+# ----------------------------------------------------------------------------
+# Uncomment these if your datasets are very large and shouldn't be in git
+# dataset/*.csv
+# data/*.dat
+# *.data
+
+# But keep smaller test files
+# !dataset/*_small.csv
+# !dataset/*_test.csv
+
+# ----------------------------------------------------------------------------
+# Archive files
+# ----------------------------------------------------------------------------
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Keep project submission archives (if needed)
+!projeto_*.zip
+!submission_*.tar.gz
+
+# ============================================================================

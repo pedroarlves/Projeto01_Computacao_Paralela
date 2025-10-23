@@ -2,4 +2,4 @@ clear
 cmake -S . -B build
 cmake --build build
 export OMP_NUM_THREADS=4
-mpirun -np 1 ./build/main dataset/mnist_train.csv 15 1
+mpirun -np 1 ./build/main_hybrid dataset/mnist_train.csv 15 1

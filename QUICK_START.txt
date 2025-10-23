@@ -1,0 +1,169 @@
+================================================================================
+QUICK START GUIDE - Automated Benchmark Scripts
+================================================================================
+
+TWO SIMPLE WAYS TO RUN YOUR BENCHMARKS:
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OPTION 1: FULL AUTOMATED BENCHMARK (Recommended)                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Run with default settings (K=15, 100 iterations):
+  $ ./run_benchmarks.sh
+
+Run with custom settings:
+  $ ./run_benchmarks.sh -k 10 -m 100 -o my_results.csv
+
+What you get:
+  ✓ Automatic compilation of both versions
+  ✓ All 7 required test configurations executed
+  ✓ Results saved to CSV file
+  ✓ Speedup analysis displayed
+  ✓ ~10-15 minutes execution time (with K=15)
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ OPTION 2: QUICK TEST (For development/testing)                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Run quick test:
+  $ ./run_quick_test.sh
+
+What you get:
+  ✓ Quick build verification
+  ✓ Single test run (K=5, 50 iterations, 4 threads)
+  ✓ ~30 seconds execution time
+
+
+================================================================================
+AVAILABLE OPTIONS FOR run_benchmarks.sh
+================================================================================
+
+  -k, --clusters NUM     Number of clusters (default: 15)
+  -m, --max-iter NUM     Maximum iterations (default: 100)
+  -s, --seed NUM         Random seed (default: 42)
+  -o, --output FILE      Output CSV file (default: benchmark_results.csv)
+  -d, --dataset PATH     Dataset path (default: dataset/mnist_train.csv)
+  -h, --help             Show help message
+
+
+================================================================================
+EXAMPLE USAGE SCENARIOS
+================================================================================
+
+1. Run full benchmark suite with 15 clusters (for final submission):
+   $ ./run_benchmarks.sh
+
+2. Run quick benchmark with 5 clusters (for testing):
+   $ ./run_benchmarks.sh -k 5 -m 50
+
+3. Run multiple benchmarks with different K values:
+   $ ./run_benchmarks.sh -k 5 -o results_k5.csv
+   $ ./run_benchmarks.sh -k 10 -o results_k10.csv
+   $ ./run_benchmarks.sh -k 15 -o results_k15.csv
+
+4. Test with different dataset:
+   $ ./run_benchmarks.sh -d dataset/mnist_test.csv -k 8
+
+
+================================================================================
+WHAT THE SCRIPT DOES STEP-BY-STEP
+================================================================================
+
+[1/7] Clean previous build directory
+[2/7] Configure project with CMake
+[3/7] Build both executables (main and main_hybrid)
+[4/7] Run OpenMP with 1 thread (baseline)
+[5/7] Run OpenMP with 2, 4, 8 threads
+[6/7] Run MPI+OpenMP hybrid configurations
+[7/7] Generate CSV report with speedup analysis
+
+
+================================================================================
+OUTPUT FILE STRUCTURE
+================================================================================
+
+The script generates a CSV file with these columns:
+
+  version            - OpenMP or MPI+OpenMP
+  configuration      - e.g., "4_threads" or "2proc_2threads"
+  num_processes      - Number of MPI processes
+  num_threads        - OpenMP threads per process
+  total_cores        - Total cores used
+  k_clusters         - Number of clusters
+  max_iterations     - Max iterations parameter
+  execution_time_s   - Measured time in seconds
+  iterations_completed - Actual iterations to converge
+  dataset            - Dataset file path
+
+You can open this CSV in Excel, LibreOffice, or any spreadsheet software!
+
+
+================================================================================
+VIEWING RESULTS
+================================================================================
+
+In terminal (formatted table):
+  $ column -t -s',' benchmark_results.csv | less
+
+Quick summary:
+  $ cat benchmark_results.csv
+
+Import into Excel/LibreOffice:
+  File > Open > benchmark_results.csv
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Script won't run:
+  $ chmod +x run_benchmarks.sh
+  $ ./run_benchmarks.sh
+
+Dataset not found:
+  $ ls dataset/
+  $ ./run_benchmarks.sh -d dataset/mnist_train.csv
+
+Build errors:
+  - Check that MPI and OpenMP are installed
+  - Try: module load gcc openmpi (on cluster systems)
+
+Out of memory:
+  - Use smaller K: ./run_benchmarks.sh -k 5
+  - Use test dataset: -d dataset/mnist_test.csv
+
+
+================================================================================
+FOR YOUR ASSIGNMENT SUBMISSION
+================================================================================
+
+The scripts automatically fulfill these requirements:
+
+  ✓ Compile both OpenMP and MPI+OpenMP versions
+  ✓ Run with 1, 2, 4, 8 threads (OpenMP)
+  ✓ Run with 1×4, 2×2, 4×1 configurations (MPI+OpenMP)
+  ✓ Collect and organize timing data
+  ✓ Generate professional output format
+
+Simply run:
+  $ ./run_benchmarks.sh
+
+And include the generated CSV file in your project submission!
+
+
+================================================================================
+NEED MORE HELP?
+================================================================================
+
+Full documentation:
+  $ cat BENCHMARK_SCRIPTS.txt
+
+Script help:
+  $ ./run_benchmarks.sh --help
+
+Project documentation:
+  $ cat README.txt
+
+
+================================================================================
