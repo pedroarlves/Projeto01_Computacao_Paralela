@@ -1,48 +1,57 @@
 /*
-main_hybrid.cc
+================================================================================
+main_hybrid.cc - Implementação K-Means Híbrida (MPI + OpenMP)
+================================================================================
 
-Corrected and simplified hybrid MPI+OpenMP K-Means implementation
-Filename: kmeans_mpi_omp.cpp
+TEMPOS DE EXECUÇÃO (servidor parcode)
+Dataset: MNIST train (60.000 amostras, 785 dimensões), K=15, max_iter=100
 
--- IMPORTANT: delivery / grading notes (please edit timings before submitting) --
+VERSÃO MPI+OpenMP (Híbrida):
+  1 processo × 4 threads: 48.6451 s
+  2 processos × 2 threads: 28.0142 s
+  4 processos × 1 thread:  28.0967 s
 
-For OpenMP-only runs (fill these measured times on the PARCODE server):
-// OpenMP timings (seconds) -- replace the X.Y with your measured values
-// threads=1:  X.Y
-// threads=2:  X.Y
-// threads=4:  X.Y
-// threads=8:  X.Y
+VERSÃO OpenMP (para comparação):
+  1 thread:  51.4609 s
+  2 threads: 28.016 s
+  4 threads: 17.3703 s
+  8 threads: 12.275 s
 
-For MPI runs (fill these measured times on the PARCODE server):
-// MPI timings (seconds) -- replace the X.Y with your measured values
-// 1 proc x 4 threads:  X.Y
-// 2 proc x 2 threads:  X.Y
-// 4 proc x 1 thread:   X.Y
+================================================================================
+MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO
+================================================================================
 
--- README / quick instructions (also included below as a separate block) --
-Compilation example:
-  mpicxx -fopenmp -O3 -std=c++17 -o kmeans_mpi_omp kmeans_mpi_omp.cpp
+1. DISTRIBUIÇÃO DE DADOS COM MPI:
+   - Rank 0 carrega dataset e faz broadcast de metadados (N, D)
+   - Dataset dividido entre processos usando MPI_Scatterv
+   - Cada processo recebe subconjunto de pontos para processar
 
-Running examples:
-  # MPI-only, 4 processes, no OpenMP threads
-  mpirun -np 4 ./kmeans_mpi_omp data.csv K max_iter
+2. INICIALIZAÇÃO E SINCRONIZAÇÃO DE CENTRÓIDES:
+   - Rank 0 seleciona K centróides iniciais aleatoriamente
+   - Centróides enviados para todos os processos via MPI_Bcast
 
-  # Hybrid: 2 MPI processes, each with 2 OpenMP threads
-  OMP_NUM_THREADS=2 mpirun -np 2 ./kmeans_mpi_omp data.csv K max_iter
+3. PARALELIZAÇÃO HÍBRIDA NO LOOP DE ATRIBUIÇÃO:
+   - Nível MPI: cada processo trabalha em seu subconjunto local
+   - Nível OpenMP: threads paralelizam cálculo de distâncias no processo
+   - Cada thread mantém buffers privativos (thread_sum_flat, thread_count)
 
-  # OpenMP-only (single process)
-  OMP_NUM_THREADS=4 ./kmeans_mpi_omp data.csv K max_iter
+4. REDUÇÃO EM DOIS NÍVEIS:
+   - Nível OpenMP: buffers de threads somados aos buffers do processo
+   - Nível MPI: MPI_Allreduce combina somas/contagens de todos processos
 
--- Notes on changes (these comments are required by the assignment):
-1) Removed placeholder data={{0.0}} for non-root ranks. Now only rank 0 loads the CSV and broadcasts dataset metadata (N and D). Data is scattered correctly using MPI_Scatterv.
-2) D and N_total are broadcast to all ranks before allocation so every rank knows dimensionality.
-3) send buffer is flattened on rank 0; recv buffers use correct element counts (counts*D).
-4) MPI reductions for centroid sums are performed with a single MPI_Allreduce over a flattened array of size K*D for efficiency.
-5) OpenMP parallel loop uses per-thread buffers (indexed by omp_get_thread_num) to avoid critical sections and reduce contention. Thread buffers are reduced to local_sum after the parallel region.
-6) RNG uses seed+rank to vary random draws across ranks.
-7) Added MPI_Barrier around timing to obtain consistent timings.
-8) Convergence tolerance loosened to 1e-6.
+5. ATUALIZAÇÃO REPLICADA DE CENTRÓIDES:
+   - Cada processo calcula novos centróides usando resultados globais
+   - Centróides replicados e sincronizados em todos os processos
 
+6. COLETA DE RESULTADOS:
+   - Labels locais coletados no rank 0 via MPI_Gatherv
+   - Rank 0 reconstrói vetor completo de labels
+
+7. SINCRONIZAÇÃO E TIMING:
+   - MPI_Barrier para medição precisa de tempo
+   - MPI_Wtime para timing consistente entre processos
+
+================================================================================
 */
 
 #include <bits/stdc++.h>
@@ -315,28 +324,3 @@ int main(int argc, char **argv) {
     MPI_Finalize();
     return 0;
 }
-
-/*
-README (brief)
-
-1) Purpose
-   Hybrid MPI+OpenMP K-Means implementation. The program expects a CSV with numeric columns (optionally header).
-
-2) Compilation
-   mpicxx -fopenmp -O3 -std=c++17 -o kmeans_mpi_omp kmeans_mpi_omp.cpp
-
-3) Execution examples
-   # Single-process OpenMP only (4 threads)
-   OMP_NUM_THREADS=4 ./kmeans_mpi_omp data.csv 8 100
-
-   # Hybrid: 2 MPI processes, each 2 OpenMP threads
-   OMP_NUM_THREADS=2 mpirun -np 2 ./kmeans_mpi_omp data.csv 8 100
-
-   # MPI only: 4 processes, 1 thread each
-   mpirun -np 4 ./kmeans_mpi_omp data.csv 8 100
-
-4) Deliverables / comments required by the assignment
-   - Keep these source comments listing the changes performed for parallelization.
-   - Measure and paste timing results (OpenMP-only and MPI configurations) at the top of the file where indicated.
-
-*/

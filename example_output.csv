@@ -1,0 +1,8 @@
+version,configuration,num_processes,num_threads,total_cores,k_clusters,max_iterations,execution_time_s,iterations_completed,dataset
+OpenMP,1_thread,1,1,1,15,100,51.4609,23,dataset/mnist_train.csv
+OpenMP,2_threads,1,2,2,15,100,28.016,23,dataset/mnist_train.csv
+OpenMP,4_threads,1,4,4,15,100,17.3703,23,dataset/mnist_train.csv
+OpenMP,8_threads,1,8,8,15,100,12.275,23,dataset/mnist_train.csv
+MPI+OpenMP,1proc_4threads,1,4,4,15,100,48.6451,23,dataset/mnist_train.csv
+MPI+OpenMP,2proc_2threads,2,2,4,15,100,28.0142,23,dataset/mnist_train.csv
+MPI+OpenMP,4proc_1thread,4,1,4,15,100,28.0967,23,dataset/mnist_train.csv

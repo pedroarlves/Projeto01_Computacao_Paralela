@@ -1,24 +1,40 @@
-//main.cc 
-// Implementação sequencial de K-Means (C++17)
-// Uso: ./kmeans data.csv K max_iter seed
-// - data.csv: CSV onde cada linha é um exemplo, colunas separadas por vírgula (float)
-// - K: número de clusters
-// - max_iter: número máximo de iterações
-// - seed: seed aleatória (opcional)
+/*
+================================================================================
+main.cc - Implementação K-Means com OpenMP
+================================================================================
 
-// ------------------------------
-// NOTAS SOBRE PARALLELIZAÇÃO (comentários exigidos pelo enunciado):
-// - Para OpenMP: paralelizar o loop que calcula a distância de cada ponto para cada centróide
-//   e a acumulação de somas para novos centróides. Usar #pragma omp parallel for
-//   com redução (ou arrays privativos + redução manual). Também paralelizar a etapa de
-//   atribuição de pontos se necessário.
-// - Para MPI: distribuir as linhas (pontos) entre os ranks (scatter or read-split).
-//   Cada rank calcula soma local e contagem por centróide; em seguida usar MPI_Allreduce
-//   para reduzir somas e contagens e atualizar centróides em todos os ranks. A etapa de
-//   inicialização dos centróides pode ser feita pelo rank 0 e depois broadcast com MPI_Bcast.
-// - No código abaixo eu marco explicitamente (COMENTADO) onde as diretivas OpenMP e chamadas
-//   MPI deveriam ser inseridas.
-// ------------------------------
+TEMPOS DE EXECUÇÃO (servidor parcode)
+Dataset: MNIST train (60.000 amostras, 785 dimensões), K=15, max_iter=100
+
+Versão sequencial (1 thread):  51.4609 s
+Versão paralela:
+  2 threads: 28.016 s   (speedup: 1.84x)
+  4 threads: 17.3703 s  (speedup: 2.96x)
+  8 threads: 12.275 s   (speedup: 4.19x)
+
+================================================================================
+MUDANÇAS REALIZADAS PARA PARALELIZAÇÃO
+================================================================================
+
+1. PARALELIZAÇÃO DO LOOP DE ATRIBUIÇÃO:
+   - Adicionado #pragma omp parallel para criar região paralela
+   - Adicionado #pragma omp for schedule(static) para dividir pontos entre threads
+   - Cada thread processa subconjunto independente de pontos
+
+2. ACUMULADORES LOCAIS POR THREAD:
+   - Cada thread mantém local_sum e local_count privativos
+   - Evita contenção e race conditions durante processamento paralelo
+
+3. REDUÇÃO MANUAL COM SEÇÃO CRÍTICA:
+   - Adicionado #pragma omp critical para somar acumuladores locais aos globais
+   - Redução ocorre apenas uma vez por thread, minimizando overhead
+
+4. ATUALIZAÇÃO SEQUENCIAL DOS CENTRÓIDES:
+   - Cálculo de novos centróides feito fora da região paralela
+   - Verificação de convergência permanece sequencial
+
+================================================================================
+*/
 
 #include <bits/stdc++.h>
 #include <omp.h>
