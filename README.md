@@ -364,16 +364,3 @@ Script para validação rápida durante desenvolvimento.
 
 ---
 
-## 👥 Autores
-
-Projeto desenvolvido para a disciplina de Computação Paralela
-
----
-
-## 📄 Licença
-
-Este projeto é para fins educacionais.
-
----
-
-**Última atualização**: Outubro 2024
